@@ -1,0 +1,61 @@
+# =============================================================================
+# requirements.base.txt  –  Hardware-agnostic dependencies
+# =============================================================================
+# Contains every dependency EXCEPT torch/torchvision, which are installed
+# separately via requirements.gpu.txt or requirements.cpu.txt.
+#
+# DO NOT install this file directly. Use one of:
+#   pip install -r requirements.cpu.txt   (CPU-only machines, CI, Docker)
+#   pip install -r requirements.gpu.txt   (CUDA machines, training servers)
+#
+# Python >= 3.10 required
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Geospatial I/O
+# ---------------------------------------------------------------------------
+rasterio>=1.3.9,<2.0.0              # GeoTIFF read/write, CRS, reprojection
+pyproj>=3.6.0,<4.0.0                # CRS transforms (rasterio dependency)
+shapely>=2.0.0,<3.0.0               # vector geometry (change polygonisation)
+fiona>=1.9.0,<2.0.0                 # GeoJSON / Shapefile write
+geopandas>=0.14.0,<2.0.0            # area calculation, vector I/O
+
+# ---------------------------------------------------------------------------
+# Numerical / array
+# ---------------------------------------------------------------------------
+numpy>=1.26.0,<3.0.0
+scipy>=1.11.0,<2.0.0                # morphological post-processing on class maps
+scikit-learn>=1.7.2
+
+# ---------------------------------------------------------------------------
+# Visualisation & dashboard
+# ---------------------------------------------------------------------------
+streamlit>=1.32.0,<2.0.0            # runnable dashboard (dashboard.py)
+plotly>=5.18.0,<6.0.0               # interactive bar/area charts
+matplotlib>=3.8.0,<4.0.0            # confusion matrix heatmap, static figures
+folium>=0.15.0,<1.0.0               # leaflet map overlay
+streamlit-folium>=0.18.0,<1.0.0     # embed folium maps inside Streamlit
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+tqdm>=4.66.0,<5.0.0                 # progress bars (inference + training)
+Pillow>=10.2.0,<12.0.0              # image utilities (torchvision dependency)
+opencv-python-headless>=4.9.0,<5.0.0  # augmentation, morphological ops
+                                       # headless = no GUI libs (safe for servers)
+
+# ---------------------------------------------------------------------------
+# Experiment tracking  (optional — safe to remove if not using WandB)
+# ---------------------------------------------------------------------------
+wandb>=0.16.0,<1.0.0                # set use_wandb=True in TrainingConfig
+
+# ---------------------------------------------------------------------------
+# Export / serving
+# ---------------------------------------------------------------------------
+onnx>=1.15.0,<2.0.0                 # ONNX export via prepare_model_for_inferencing.py
+
+# ---------------------------------------------------------------------------
+# Dev / testing
+# ---------------------------------------------------------------------------
+pytest>=8.0.0,<9.0.0
+pytest-cov>=4.1.0,<5.0.0

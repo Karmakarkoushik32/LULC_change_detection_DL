@@ -1,0 +1,16 @@
+# Temp files
+temp/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Dataset folders (ignore large data)
+checkpoints/
+datasets/raw_images/
+datasets/annotations/image/
+datasets/annotations/shape/
+datasets/annotations/generated_mask/
+datasets/training/
+datasets/validation/
+datasets/dataset.zip

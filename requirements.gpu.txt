@@ -1,0 +1,38 @@
+# =============================================================================
+# requirements.gpu.txt  –  CUDA training / inference
+# =============================================================================
+# For machines with an NVIDIA GPU (CUDA 12.1).
+# Installs PyTorch with CUDA support, then pulls in all base dependencies.
+#
+# Install:
+#   pip install -r requirements.gpu.txt
+#
+# Tested on:
+#   CUDA 12.1  +  cuDNN 8.9  +  Python 3.10/3.11
+#   Ubuntu 20.04 / 22.04
+#
+# To use a different CUDA version, change the --index-url below:
+#   CUDA 11.8 → https://download.pytorch.org/whl/cu118
+#   CUDA 12.4 → https://download.pytorch.org/whl/cu124
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# PyTorch — CUDA 12.1 wheels
+# Pull from the official PyTorch index, not PyPI (PyPI only has CPU builds).
+# ---------------------------------------------------------------------------
+--index-url https://download.pytorch.org/whl/cu121
+
+torch>=2.2.0,<3.0.0
+torchvision>=0.17.0,<1.0.0          # pretrained ResNet-34/50 ImageNet weights
+
+# ---------------------------------------------------------------------------
+# Switch back to PyPI for all remaining packages
+# ---------------------------------------------------------------------------
+--extra-index-url https://pypi.org/simple
+
+# ONNX Runtime with CUDA execution provider
+# (separate from onnxruntime-gpu — this one bundles CUDA libs)
+onnxruntime-gpu>=1.17.0,<2.0.0
+
+# All other shared dependencies
+-r requirements.base.txt

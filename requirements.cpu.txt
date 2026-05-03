@@ -1,0 +1,32 @@
+# =============================================================================
+# requirements.cpu.txt  –  CPU-only inference / CI / Docker
+# =============================================================================
+# For machines without a GPU: local development, CI pipelines,
+# lightweight inference servers, and Docker images.
+#
+# Install:
+#   pip install -r requirements.cpu.txt
+#
+# Notes:
+#   • CPU torch wheels come from PyPI — no special index needed.
+#   • Training on CPU is possible but very slow (use only for smoke-tests).
+#   • For production CPU inference, prefer the exported TorchScript or
+#     ONNX model via onnxruntime (included below) — 3–5× faster than PyTorch CPU.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# PyTorch — CPU-only wheels (from PyPI)
+# ---------------------------------------------------------------------------
+torch>=2.2.0,<3.0.0
+torchvision>=0.17.0,<1.0.0          # pretrained ResNet-34/50 ImageNet weights
+
+# ---------------------------------------------------------------------------
+# ONNX Runtime — CPU execution provider
+# Faster than PyTorch CPU for inference; no CUDA dependency.
+# ---------------------------------------------------------------------------
+onnxruntime>=1.17.0,<2.0.0
+
+# ---------------------------------------------------------------------------
+# All other shared dependencies
+# ---------------------------------------------------------------------------
+-r requirements.base.txt
