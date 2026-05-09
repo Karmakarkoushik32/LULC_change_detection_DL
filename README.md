@@ -32,23 +32,34 @@ End-to-end pipeline for detecting LULC changes in georeferenced drone imagery:
 
 ```
 LULC_change_detection_DL/
-├── main.py                      # Entry point
-├── change_detection_pipeline.py # Pipeline orchestrator
-├── change_metrics.py            # Change metrics computation
-├── inference.py                 # Tile-based inference
-├── config.py                    # Configuration & class definitions
-├── utils.py                     # Helper utilities
-│
-├── final_model/
-│   └── resunet_scripted.pt      # Pre-trained model
-│
+├── change_detection_pipeline.py    # Pipeline orchestrator
+├── change_metrics.py               # Change metrics computation
+├── config.py                       # Configuration & class mappings
+├── inference.py                    # Tile-based segmentation inference
+├── losses.py                       # Loss functions
+├── main.py                         # Entry point
+├── metrics.py                      # Evaluation metrics
+├── model.py                        # ResUNet model architecture
+├── prepare_model_for_inferencing.py# TorchScript export helper
+├── train.ipynb                     # Training notebook
+├── utils.py                        # Helper utilities
+├── requirements.base.txt           # Core dependencies
+├── requirements.cpu.txt            # CPU dependency set
+├── requirements.gpu.txt            # GPU dependency set
 ├── datasets/
-│   └── raw_images/              # Place input images here
-│
+│   ├── annotations/                # Dataset prep notebooks and scripts
+│   ├── raw_images/                 # Input GeoTIFF images
+│   ├── training/                   # Training image/mask patches
+│   ├── validation/                 # Validation image/mask patches
+│   ├── dataset.zip                 # Dataset archive
+│   └── manifest.json               # Dataset manifest
+├── final_model/
+│   └── resunet_scripted.pt         # Pre-trained TorchScript model
 └── output/                      # Results (auto-created)
     ├── index.html               # Web results viewer
     ├── runs.json                # Run history
     └── RUN_ID=<uuid>/           # Per-run outputs
+
 ```
 
 ---
