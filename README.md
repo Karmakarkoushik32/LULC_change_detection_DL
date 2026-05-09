@@ -1,12 +1,30 @@
-# 🛰️ Drone Image Change Detection
+# 🛰️ LULC Change Detection
 
-Detect land-use and land-cover (LULC) changes between two drone captures of the same area using deep learning-based semantic segmentation.
+![LULC Change Detection Dashboard](md_assets/dashboard.png)
+
+Automatically detect and quantify land-use and land-cover changes between two drone image captures using deep learning segmentation.
+
+---
+
+## 📋 Table of Contents
+
+- [Overview](#overview)
+- [Project Structure](#project-structure)
+- [Quick Start](#quick-start)
+- [Pipeline](#pipeline)
+- [Outputs](#outputs)
+- [Viewing Results](#viewing-results)
 
 ---
 
 ## 📌 Overview
 
-This pipeline takes two georeferenced drone images captured at different dates and produces a change map highlighting regions where land cover has changed. It combines classical GIS preprocessing with a deep learning segmentation model (ResUNet) to generate per-pixel class predictions, which are then differenced to identify change.
+End-to-end pipeline for detecting LULC changes in georeferenced drone imagery:
+
+- Aligns and rectifies image pairs
+- Classifies pixels into 5 classes: **building, road, waterbody, vegetation, other**
+- Generates segmentation masks and vector polygons (GeoJSON)
+- Computes per-class transition matrices and change statistics
 
 ---
 
@@ -14,119 +32,137 @@ This pipeline takes two georeferenced drone images captured at different dates a
 
 ```
 LULC_change_detection_DL/
-├── datasets/
-│   └── annotations/
-│       ├── generate_patch_dataset.ipynb   # Patch extraction from raw GeoTIFFs
-│       └── prepare_dataset.ipynb          # Dataset preparation & splits
-│   └── manifest.json                      # Dataset manifest
+├── main.py                      # Entry point
+├── change_detection_pipeline.py # Pipeline orchestrator
+├── change_metrics.py            # Change metrics computation
+├── inference.py                 # Tile-based inference
+├── config.py                    # Configuration & class definitions
+├── utils.py                     # Helper utilities
+│
 ├── final_model/
-│   └── resunet_scripted.pt                # Exported TorchScript model
-├── dataset.py                             # Dataset class & data loading
-├── losses.py                              # Loss functions
-├── metrics.py                             # IoU, confusion matrix metrics
-├── model.py                               # ResUNet architecture definition
-├── utils.py                               # Helper utilities
-├── prepare_model_for_inferencing.py       # Export trained model to TorchScript
-├── inference.py                           # Tile-based inference on GeoTIFF
-├── train.ipynb                            # Training notebook
-├── requirements.base.txt                  # Base dependencies
-├── requirements.cpu.txt                   # CPU-only install
-├── requirements.gpu.txt                   # GPU (CUDA) install
-└── README.md
+│   └── resunet_scripted.pt      # Pre-trained model
+│
+├── datasets/
+│   └── raw_images/              # Place input images here
+│
+└── output/                      # Results (auto-created)
+    ├── index.html               # Web results viewer
+    ├── runs.json                # Run history
+    └── RUN_ID=<uuid>/           # Per-run outputs
 ```
 
 ---
 
-## ✅ Completed Steps
+## 🚀 Quick Start
 
-### 1. Image Preprocessing & Alignment
-- **Image alignment & coregistration** — spatially aligns both date images so pixels correspond to the same ground location
-- **Pixel resolution standardization** — resamples both images to a common GSD (ground sampling distance)
-- **CRS correction** — reprojects all inputs to a unified coordinate reference system
-- **Bounding box clipping** — clips both images to the same spatial extent, ensuring identical shape and pixel grid
+### 1. Install Dependencies
 
-### 2. Model Building
-- Semantic segmentation model based on **ResUNet** architecture with attention gates
-- Trained to classify land-cover classes per pixel (e.g. vegetation, bare soil, water, built-up)
-- Exported as a **TorchScript** (`.pt`) model for portable, dependency-light inference
-
-### 3. Inference Pipeline
-- Tile-based inference with **edge padding** to handle images of arbitrary size
-- Normalizes input using ImageNet statistics
-- Outputs a single-band GeoTIFF prediction mask with class IDs
-- Preserves original CRS and spatial metadata in the output raster
-
----
-
-## ⚠️ Not Completed
-
-| Task | Status |
-|---|---|
-| Proper model training (full dataset, hyperparameter tuning) | ❌ Not completed |
-| Change detection (diff of two prediction masks) | ❌ Not completed |
-
-> The current pipeline produces segmentation masks for individual images. Change detection by differencing two masks is the planned next step.
-
----
-
-## 🚀 Usage
-
-### 1. Clone the repository
-
+**CPU:**
 ```bash
-git clone https://github.com/your-username/lulc-change-detection.git
-cd lulc-change-detection
-```
-
-### 2. Install dependencies
-
-```bash
-# CPU only
 pip install -r requirements.base.txt -r requirements.cpu.txt
+```
 
-# GPU (CUDA)
+**GPU (CUDA 11.8+):**
+```bash
 pip install -r requirements.base.txt -r requirements.gpu.txt
-``` in `inference.py`
+```
 
-Open `inference.py` and set your input GeoTIFF path:
+### 2. Place Input Images
+
+```
+datasets/raw_images/
+├── Phase1.tif    # Earlier capture
+└── Phase2.tif    # Later capture
+```
+
+### 3. Set Image Paths in `main.py`
 
 ```python
-INPUT_TIF  = r"path/to/your/image.tif"
-OUTPUT_TIF = "prediction.tif"
+if __name__ == "__main__":
+    image_path_1 = r'path/to/Phase1.tif'
+    image_path_2 = r'path/to/Phase2.tif'
+
+    data = main(image_path_1, image_path_2)
+    print(data)
 ```
 
-### 4. Run inference
+### 4. Run
 
 ```bash
-python inference.py
+python main.py
 ```
 
-Output will be saved as `prediction.tif` — a single-band GeoTIFF with per-pixel class labels.
+Results are saved to `output/RUN_ID=<unique-id>/`.
 
 ---
 
-## 🔧 Requirements
+## 🔄 Pipeline
 
 ```
-torch, rasterio, numpy, tqdm, + others in requirements.base.txt
+Image Pair (T1, T2)
+       ↓
+Rectification & Alignment
+       ↓
+Segmentation Inference
+       ↓
+Polygonization
+       ↓
+Change Detection
+       ↓
+Output (GeoJSON, Metrics, Rasters)
 ```
 
-Install via:
+**Stage 1 — Alignment:** Coregisters the image pair, resamples to 10 cm resolution, reprojects to a unified CRS, and clips to identical extent.
 
-```bash
-# CPU only
-pip install -r requirements.base.txt -r requirements.cpu.txt
+**Stage 2 — Inference:** Runs tile-based segmentation (512×512 patches with edge padding) and outputs single-band class rasters.
 
-# GPU (CUDA)
-pip install -r requirements.base.txt -r requirements.gpu.txt
-```
+**Stage 3 — Polygonization:** Vectorizes segments into GeoJSON FeatureCollections with class, area, and perimeter properties.
 
-> CUDA-capable GPU recommended for large images. Falls back to CPU automatically.
+**Stage 4 — Change Detection:** Computes pixel-level differences, transition matrices, area changes, and change percentages per class.
 
 ---
 
-## 📎 Notes
+## 📊 Outputs
 
-- Input image must be a **3-band RGB GeoTIFF**
-- Model expects inputs normalized with ImageNet mean/std — preprocessing is handled inside `inference.py`
-- Patch size is set to `512×512` by default; edge tiles are reflection-padded automatically
+Each run produces a folder `output/RUN_ID=<uuid>/`:
+
+| File | Description |
+|------|-------------|
+| `processed_1.tif`, `processed_2.tif` | Rectified input images |
+| `segmented_1.tif`, `segmented_2.tif` | Class prediction masks |
+| `segmented_polygonized_1.geojson` | Vector polygons — time 1 |
+| `segmented_polygonized_2.geojson` | Vector polygons — time 2 |
+| `change_metrics.json` | Change statistics |
+
+### `change_metrics.json` format
+
+```json
+{
+  "class_mappings": {"1": "building", "2": "road"},
+  "bin_count": {
+    "1": {"before": 5000, "after": 7500}
+  },
+  "transition_matrix": {
+    "1": {"1": 4500, "2": 500}
+  },
+  "change_percent": {"1": 50.0, "2": -6.67}
+}
+```
+
+---
+
+## 🌐 Viewing Results
+
+**Browser viewer** — serve the output folder and open in your browser:
+
+```bash
+cd ./output
+python -m http.server 8000
+```
+
+Then navigate to `http://localhost:8000/index.html`.
+
+**GIS software** — open any `.geojson` file in:
+- [QGIS](https://qgis.org) (free)
+- ArcGIS Pro
+- Folium (Python)

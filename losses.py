@@ -3,10 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Optional
 
-
 # ---------------------------------------------------------------------------
 # Focal Loss (Corrected)
 # ---------------------------------------------------------------------------
+
 
 class FocalLoss(nn.Module):
     def __init__(
@@ -15,8 +15,8 @@ class FocalLoss(nn.Module):
         gamma: float = 2.0,
         weight: Optional[torch.Tensor] = None,
         ignore_index: int = -100,
-        reduction: str = 'mean',
-        label_smoothing: float = 0.0
+        reduction: str = "mean",
+        label_smoothing: float = 0.0,
     ):
         super().__init__()
         self.alpha = alpha
@@ -52,16 +52,18 @@ class FocalLoss(nn.Module):
         # label smoothing (correct CE-style smoothing)
         if self.label_smoothing > 0:
             smooth_loss = -log_probs.mean(dim=1)
-            loss = (1 - self.label_smoothing) * loss + self.label_smoothing * smooth_loss
+            loss = (
+                1 - self.label_smoothing
+            ) * loss + self.label_smoothing * smooth_loss
 
         # apply ignore mask
         loss = loss * valid_mask
 
-        if self.reduction == 'mean':
+        if self.reduction == "mean":
             return loss.sum() / valid_mask.sum().clamp_min(1)
-        elif self.reduction == 'sum':
+        elif self.reduction == "sum":
             return loss.sum()
-        elif self.reduction == 'none':
+        elif self.reduction == "none":
             return loss
         else:
             raise ValueError(f"Invalid reduction: {self.reduction}")
@@ -70,6 +72,7 @@ class FocalLoss(nn.Module):
 # ---------------------------------------------------------------------------
 # Dice Loss (Corrected)
 # ---------------------------------------------------------------------------
+
 
 class DiceLoss(nn.Module):
     def __init__(
@@ -83,7 +86,9 @@ class DiceLoss(nn.Module):
         self.smooth = smooth
         self.per_image = per_image
         self.ignore_index = ignore_index
-        self.register_buffer("class_weights", class_weights if class_weights is not None else None)
+        self.register_buffer(
+            "class_weights", class_weights if class_weights is not None else None
+        )
 
     def forward(self, preds: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         B, C, H, W = preds.shape
@@ -91,7 +96,7 @@ class DiceLoss(nn.Module):
 
         targets = targets.long()
 
-        valid_mask = (targets != self.ignore_index)
+        valid_mask = targets != self.ignore_index
         safe_targets = targets.clone()
         safe_targets[~valid_mask] = 0
 
@@ -119,6 +124,7 @@ class DiceLoss(nn.Module):
 # ---------------------------------------------------------------------------
 # Combo Loss (Corrected)
 # ---------------------------------------------------------------------------
+
 
 class ComboLoss(nn.Module):
     def __init__(
@@ -156,13 +162,14 @@ class ComboLoss(nn.Module):
         return total, {
             "focal": float(focal_val.detach()),
             "dice": float(dice_val.detach()),
-            "total": float(total.detach())
+            "total": float(total.detach()),
         }
 
 
 # ---------------------------------------------------------------------------
 # Class Weights (unchanged, but good)
 # ---------------------------------------------------------------------------
+
 
 def compute_class_weights(
     pixel_counts: torch.Tensor,

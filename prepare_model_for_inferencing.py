@@ -11,11 +11,7 @@ BACKBONE = "resnet34"
 PRETRAINED = False  # important: not needed when loading weights
 
 # ── load model ────────────────────────────────────────────
-model = ResUNet(
-    num_classes=NUM_CLASSES,
-    backbone=BACKBONE,
-    pretrained=PRETRAINED
-)
+model = ResUNet(num_classes=NUM_CLASSES, backbone=BACKBONE, pretrained=PRETRAINED)
 
 ckpt = torch.load(CHECKPOINT_PATH, map_location=DEVICE)
 model.load_state_dict(ckpt["model"])

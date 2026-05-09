@@ -40,20 +40,27 @@ from torchvision import models
 from torchvision.models import ResNet34_Weights, ResNet50_Weights
 from typing import List, Tuple, Literal
 
-
 # ---------------------------------------------------------------------------
 # Building blocks
 # ---------------------------------------------------------------------------
 
+
 class ConvBnRelu(nn.Module):
     """Conv2d → BatchNorm2d → ReLU (inplace)."""
 
-    def __init__(self, in_ch: int, out_ch: int, kernel: int = 3,
-                 padding: int = 1, dilation: int = 1):
+    def __init__(
+        self,
+        in_ch: int,
+        out_ch: int,
+        kernel: int = 3,
+        padding: int = 1,
+        dilation: int = 1,
+    ):
         super().__init__()
         self.block = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, kernel, padding=padding,
-                      dilation=dilation, bias=False),
+            nn.Conv2d(
+                in_ch, out_ch, kernel, padding=padding, dilation=dilation, bias=False
+            ),
             nn.BatchNorm2d(out_ch),
             nn.ReLU(inplace=True),
         )
@@ -143,14 +150,20 @@ class ASPPModule(nn.Module):
     Output : (B, out_ch, H, W)   default out_ch = 256
     """
 
-    def __init__(self, in_ch: int, out_ch: int = 256,
-                 dilations: Tuple[int, ...] = (1, 6, 12, 18)):
+    def __init__(
+        self, in_ch: int, out_ch: int = 256, dilations: Tuple[int, ...] = (1, 6, 12, 18)
+    ):
         super().__init__()
         self.branches = nn.ModuleList()
         for d in dilations:
             self.branches.append(
-                ConvBnRelu(in_ch, out_ch, kernel=1 if d == 1 else 3,
-                           padding=0 if d == 1 else d, dilation=d)
+                ConvBnRelu(
+                    in_ch,
+                    out_ch,
+                    kernel=1 if d == 1 else 3,
+                    padding=0 if d == 1 else d,
+                    dilation=d,
+                )
             )
         # Global average pooling branch
         self.global_pool = nn.Sequential(
@@ -191,8 +204,9 @@ class DecoderBlock(nn.Module):
         x = self.up(x)
         # Align spatial dims (handles odd input sizes gracefully)
         if x.shape[2:] != skip.shape[2:]:
-            x = F.interpolate(x, size=skip.shape[2:],
-                              mode="bilinear", align_corners=False)
+            x = F.interpolate(
+                x, size=skip.shape[2:], mode="bilinear", align_corners=False
+            )
         skip = self.attention(g=x, x=skip)
         return self.res_block(torch.cat([x, skip], dim=1))
 
@@ -200,6 +214,7 @@ class DecoderBlock(nn.Module):
 # ---------------------------------------------------------------------------
 # Encoder wrappers
 # ---------------------------------------------------------------------------
+
 
 class ResNet34Encoder(nn.Module):
     """Extract 5 feature maps from a pretrained ResNet-34."""
@@ -209,22 +224,22 @@ class ResNet34Encoder(nn.Module):
         weights = ResNet34_Weights.IMAGENET1K_V1 if pretrained else None
         base = models.resnet34(weights=weights)
 
-        self.stem   = nn.Sequential(base.conv1, base.bn1, base.relu)  # /2
-        self.pool   = base.maxpool                                      # /4
-        self.layer1 = base.layer1   # 64  ch,  /4
-        self.layer2 = base.layer2   # 128 ch,  /8
-        self.layer3 = base.layer3   # 256 ch,  /16
-        self.layer4 = base.layer4   # 512 ch,  /32
+        self.stem = nn.Sequential(base.conv1, base.bn1, base.relu)  # /2
+        self.pool = base.maxpool  # /4
+        self.layer1 = base.layer1  # 64  ch,  /4
+        self.layer2 = base.layer2  # 128 ch,  /8
+        self.layer3 = base.layer3  # 256 ch,  /16
+        self.layer4 = base.layer4  # 512 ch,  /32
 
         # Channel counts for decoder wiring
         self.out_channels = [64, 64, 128, 256, 512]  # stem,l1,l2,l3,l4
 
     def forward(self, x):
-        e0 = self.stem(x)           # (B,  64, H/2,  W/2)
+        e0 = self.stem(x)  # (B,  64, H/2,  W/2)
         e1 = self.layer1(self.pool(e0))  # (B,  64, H/4,  W/4)
-        e2 = self.layer2(e1)        # (B, 128, H/8,  W/8)
-        e3 = self.layer3(e2)        # (B, 256, H/16, W/16)
-        e4 = self.layer4(e3)        # (B, 512, H/32, W/32)
+        e2 = self.layer2(e1)  # (B, 128, H/8,  W/8)
+        e3 = self.layer3(e2)  # (B, 256, H/16, W/16)
+        e4 = self.layer4(e3)  # (B, 512, H/32, W/32)
         return e0, e1, e2, e3, e4
 
 
@@ -236,12 +251,12 @@ class ResNet50Encoder(nn.Module):
         weights = ResNet50_Weights.IMAGENET1K_V2 if pretrained else None
         base = models.resnet50(weights=weights)
 
-        self.stem   = nn.Sequential(base.conv1, base.bn1, base.relu)
-        self.pool   = base.maxpool
-        self.layer1 = base.layer1   # 256  ch (bottleneck),  /4
-        self.layer2 = base.layer2   # 512  ch,  /8
-        self.layer3 = base.layer3   # 1024 ch,  /16
-        self.layer4 = base.layer4   # 2048 ch,  /32
+        self.stem = nn.Sequential(base.conv1, base.bn1, base.relu)
+        self.pool = base.maxpool
+        self.layer1 = base.layer1  # 256  ch (bottleneck),  /4
+        self.layer2 = base.layer2  # 512  ch,  /8
+        self.layer3 = base.layer3  # 1024 ch,  /16
+        self.layer4 = base.layer4  # 2048 ch,  /32
 
         self.out_channels = [64, 256, 512, 1024, 2048]
 
@@ -257,6 +272,7 @@ class ResNet50Encoder(nn.Module):
 # ---------------------------------------------------------------------------
 # Full ResU-Net
 # ---------------------------------------------------------------------------
+
 
 class ResUNet(nn.Module):
     """
@@ -295,7 +311,7 @@ class ResUNet(nn.Module):
         else:
             raise ValueError(f"Unsupported backbone: {backbone}")
 
-        enc_ch = self.encoder.out_channels   # [e0, e1, e2, e3, e4]
+        enc_ch = self.encoder.out_channels  # [e0, e1, e2, e3, e4]
 
         # --- Bottleneck (ASPP on deepest encoder feature) ---
         self.bottleneck = ASPPModule(enc_ch[4], out_ch=decoder_ch[0])
@@ -311,7 +327,9 @@ class ResUNet(nn.Module):
         self.dec4 = DecoderBlock(decoder_ch[3], enc_ch[0], decoder_ch[3])
 
         # Final upsample ×2 to restore full H×W, then classify
-        self.final_up = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=False)
+        self.final_up = nn.Upsample(
+            scale_factor=2, mode="bilinear", align_corners=False
+        )
         self.head = nn.Sequential(
             ConvBnRelu(decoder_ch[3], decoder_ch[3]),
             nn.Conv2d(decoder_ch[3], num_classes, 1),
@@ -326,12 +344,19 @@ class ResUNet(nn.Module):
     # Weight initialisation for decoder (encoder keeps pretrained weights)
     # ------------------------------------------------------------------
     def _init_decoder_weights(self):
-        for module in [self.bottleneck, self.dec1, self.dec2,
-                       self.dec3, self.dec4, self.head]:
+        for module in [
+            self.bottleneck,
+            self.dec1,
+            self.dec2,
+            self.dec3,
+            self.dec4,
+            self.head,
+        ]:
             for m in module.modules():
                 if isinstance(m, nn.Conv2d):
-                    nn.init.kaiming_normal_(m.weight, mode="fan_out",
-                                            nonlinearity="relu")
+                    nn.init.kaiming_normal_(
+                        m.weight, mode="fan_out", nonlinearity="relu"
+                    )
                     if m.bias is not None:
                         nn.init.zeros_(m.bias)
                 elif isinstance(m, nn.BatchNorm2d):
@@ -380,15 +405,15 @@ class ResUNet(nn.Module):
         """
         e0, e1, e2, e3, e4 = self.encoder(x)
 
-        b = self.bottleneck(e4)       # (B, 256, H/32, W/32)
+        b = self.bottleneck(e4)  # (B, 256, H/32, W/32)
 
-        d1 = self.dec1(b,  e3)        # (B, 128, H/16, W/16)
-        d2 = self.dec2(d1, e2)        # (B,  64, H/8,  W/8)
-        d3 = self.dec3(d2, e1)        # (B,  32, H/4,  W/4)
-        d4 = self.dec4(d3, e0)        # (B,  32, H/2,  W/2)
+        d1 = self.dec1(b, e3)  # (B, 128, H/16, W/16)
+        d2 = self.dec2(d1, e2)  # (B,  64, H/8,  W/8)
+        d3 = self.dec3(d2, e1)  # (B,  32, H/4,  W/4)
+        d4 = self.dec4(d3, e0)  # (B,  32, H/2,  W/2)
 
-        out = self.final_up(d4)       # (B,  32, H,    W)
-        return self.head(out)         # (B, num_classes, H, W)
+        out = self.final_up(d4)  # (B,  32, H,    W)
+        return self.head(out)  # (B, num_classes, H, W)
 
     # ------------------------------------------------------------------
     # Convenience
@@ -396,8 +421,7 @@ class ResUNet(nn.Module):
     def count_parameters(self) -> dict:
         total = sum(p.numel() for p in self.parameters())
         trainable = sum(p.numel() for p in self.parameters() if p.requires_grad)
-        return {"total": total, "trainable": trainable,
-                "frozen": total - trainable}
+        return {"total": total, "trainable": trainable, "frozen": total - trainable}
 
 
 # ---------------------------------------------------------------------------

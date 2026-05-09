@@ -1,5 +1,3 @@
-
-
 import torch
 import numpy as np
 from typing import Optional
@@ -7,6 +5,7 @@ from typing import Optional
 # ---------------------------------------------------------------------------
 # Metric helpers
 # ---------------------------------------------------------------------------
+
 
 def _tp_fp_fn(cm: torch.Tensor):
     cm = cm.float()
@@ -20,11 +19,7 @@ def iou(cm, class_map, ignore_index=None):
     tp, fp, fn = _tp_fp_fn(cm)
 
     denom = tp + fp + fn
-    iou_vals = torch.where(
-        denom > 0,
-        tp / denom.clamp(min=1e-8),
-        torch.zeros_like(tp)
-    )
+    iou_vals = torch.where(denom > 0, tp / denom.clamp(min=1e-8), torch.zeros_like(tp))
 
     present = cm.sum(dim=1) > 0
 
@@ -33,10 +28,7 @@ def iou(cm, class_map, ignore_index=None):
 
     miou = iou_vals[present].mean().item() if present.any() else 0.0
 
-    per_class = {
-        class_map[i]: round(iou_vals[i].item(), 4)
-        for i in class_map
-    }
+    per_class = {class_map[i]: round(iou_vals[i].item(), 4) for i in class_map}
 
     return miou, per_class
 
@@ -45,32 +37,18 @@ def commission_error(cm, class_map):
     tp, fp, _ = _tp_fp_fn(cm)
 
     denom = tp + fp
-    comm = torch.where(
-        denom > 0,
-        fp / denom.clamp(min=1e-8),
-        torch.zeros_like(tp)
-    )
+    comm = torch.where(denom > 0, fp / denom.clamp(min=1e-8), torch.zeros_like(tp))
 
-    return {
-        class_map[i]: round(comm[i].item(), 4)
-        for i in class_map
-    }
+    return {class_map[i]: round(comm[i].item(), 4) for i in class_map}
 
 
 def omission_error(cm, class_map):
     tp, _, fn = _tp_fp_fn(cm)
 
     denom = tp + fn
-    omiss = torch.where(
-        denom > 0,
-        fn / denom.clamp(min=1e-8),
-        torch.zeros_like(tp)
-    )
+    omiss = torch.where(denom > 0, fn / denom.clamp(min=1e-8), torch.zeros_like(tp))
 
-    return {
-        class_map[i]: round(omiss[i].item(), 4)
-        for i in class_map
-    }
+    return {class_map[i]: round(omiss[i].item(), 4) for i in class_map}
 
 
 def pixel_accuracy(cm):
@@ -82,6 +60,7 @@ def pixel_accuracy(cm):
 # ---------------------------------------------------------------------------
 # Main class
 # ---------------------------------------------------------------------------
+
 
 class SegmentationMetrics:
     def __init__(
@@ -130,7 +109,7 @@ class SegmentationMetrics:
         targets = targets.clamp(0, self.num_classes - 1)
 
         combined = self.num_classes * targets + preds
-        conf = torch.bincount(combined, minlength=self.num_classes ** 2)
+        conf = torch.bincount(combined, minlength=self.num_classes**2)
 
         self._conf_matrix += conf.reshape(self.num_classes, self.num_classes)
 
@@ -167,7 +146,6 @@ class SegmentationMetrics:
     def confusion_matrix(self) -> np.ndarray:
         return self._conf_matrix.numpy()
 
-
     # ------------------------------------------------------------------
     def log_status(self):
         r = self.compute()
@@ -198,9 +176,11 @@ class SegmentationMetrics:
         """Return raw (C, C) numpy confusion matrix."""
         return self._conf_matrix.numpy()
 
+
 # ---------------------------------------------------------------------------
 # Lightweight single-batch functions (for quick eval without accumulation)
 # ---------------------------------------------------------------------------
+
 
 def batch_iou(
     preds: torch.Tensor,
@@ -218,21 +198,23 @@ def batch_iou(
     if preds.dim() == 4:
         preds = preds.argmax(dim=1)
 
-    preds   = preds.flatten().long()
+    preds = preds.flatten().long()
     targets = targets.flatten().long()
 
     if ignore_index >= 0:
-        mask    = targets != ignore_index
-        preds   = preds[mask]
+        mask = targets != ignore_index
+        preds = preds[mask]
         targets = targets[mask]
 
     ious = []
     for c in range(num_classes):
-        pred_c   = preds == c
+        pred_c = preds == c
         target_c = targets == c
-        inter    = (pred_c & target_c).sum().float()
-        union    = (pred_c | target_c).sum().float()
-        ious.append((inter / union.clamp(min=1e-8)).item() if union > 0 else float("nan"))
+        inter = (pred_c & target_c).sum().float()
+        union = (pred_c | target_c).sum().float()
+        ious.append(
+            (inter / union.clamp(min=1e-8)).item() if union > 0 else float("nan")
+        )
     return torch.tensor(ious)
 
 
@@ -259,12 +241,12 @@ if __name__ == "__main__":
     meter = SegmentationMetrics(class_map=class_map, ignore_index=0)
 
     for _ in range(4):
-        preds   = torch.randn(2, C, 128, 128)
+        preds = torch.randn(2, C, 128, 128)
         targets = torch.randint(0, C, (2, 128, 128))
         meter.update(preds, targets)
 
     meter.log_status()
 
-    preds   = torch.randn(2, C, 64, 64)
+    preds = torch.randn(2, C, 64, 64)
     targets = torch.randint(0, C, (2, 64, 64))
     print("Batch mIoU:", round(batch_miou(preds, targets, C), 4))
